@@ -1,0 +1,1 @@
+"""Data-access repositories — thin DB boundary for services."""

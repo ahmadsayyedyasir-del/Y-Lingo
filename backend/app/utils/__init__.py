@@ -1,0 +1,1 @@
+"""Pure utility helpers (no DB, no HTTP)."""
