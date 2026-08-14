@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import tempfile
 import traceback
@@ -18,6 +19,7 @@ from app.core.config import settings
 from app.core.exceptions import InvalidFileError, RAGConfigurationError
 from app.models.rag_document import RAGDocument, RAGDocumentChunk
 
+logger = logging.getLogger(__name__)
 SYSTEM_USER_ID = UUID("00000000-0000-0000-0000-000000000000")
 
 # Load embedding model with fallback
@@ -32,13 +34,13 @@ try:
             try:
                 _EMBEDDING_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
                 _MODEL_LOADED = True
-                print("✅ SentenceTransformer loaded successfully")
-            except Exception as e:
-                print(f"❌ Failed to load SentenceTransformer: {str(e)}")
+                logger.info("SentenceTransformer loaded successfully")
+            except Exception as exc:
+                logger.warning("Failed to load SentenceTransformer: %s", exc)
                 _MODEL_LOADED = False
         return _EMBEDDING_MODEL
 except ImportError:
-    print("⚠️ SentenceTransformers not installed. Using fallback.")
+    logger.warning("sentence-transformers not installed — using fallback embedding.")
     _MODEL_LOADED = False
     def get_embedding_model():
         return None
@@ -95,8 +97,8 @@ class RAGService:
                 try:
                     embedding = self._generate_embedding(chunk_text)
                     embedding_str = str(embedding)
-                except Exception as e:
-                    print(f"⚠️ Embedding generation failed for chunk {i}: {str(e)}")
+                except Exception as exc:
+                    logger.warning("Embedding failed for chunk %d: %s", i, exc)
                     embedding_str = str([0.0] * 384)
 
                 chunk = RAGDocumentChunk(
@@ -121,12 +123,12 @@ class RAGService:
                 "message": f"Successfully processed {len(chunks)} chunks.",
             }
 
-        except Exception as e:
-            print(f"❌ RAG processing error: {traceback.format_exc()}")
+        except Exception as exc:
+            logger.error("RAG processing error: %s", traceback.format_exc())
             if 'document' in locals():
                 document.status = "error"
                 self.db.flush()
-            raise RAGConfigurationError(f"Failed to process PDF: {str(e)}")
+            raise RAGConfigurationError(f"Failed to process PDF: {str(exc)}")
 
         finally:
             os.unlink(tmp_path)
@@ -160,8 +162,8 @@ class RAGService:
         if model is not None:
             try:
                 return model.encode(text).tolist()
-            except Exception as e:
-                print(f"⚠️ Embedding failed: {str(e)}. Using fallback.")
+            except Exception as exc:
+                logger.warning("Embedding encode failed: %s. Using fallback.", exc)
                 return self._fallback_embedding(text)
         return self._fallback_embedding(text)
 
@@ -237,8 +239,8 @@ class RAGService:
                 })
             return results
 
-        except Exception as e:
-            print(f"⚠️ Semantic search failed: {str(e)}. Using text fallback.")
+        except Exception as exc:
+            logger.warning("Semantic search failed: %s — using text fallback.", exc)
             return self._text_fallback(user_id, query, top_k, category, include_system)
 
     def _text_fallback(

@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
+import logging
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,6 +23,8 @@ from app.models.conversation_session import ConversationSession
 from app.services.ai_provider import get_ai_provider
 from app.services.conversation_manager import ConversationManager
 from app.services.coaching_report_service import CoachingReportService
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationService:
@@ -134,13 +138,12 @@ class ConversationService:
             rag_context=rag_context,
         )
 
-        # Get AI response
         try:
             provider = get_ai_provider()
             ai_response = provider.generate_response(prompt_messages)
-            print(f"📤 AI Response: {ai_response[:100]}...")
-        except (AIConfigurationError, AIProviderError) as e:
-            print(f"❌ AI Error: {str(e)}")
+            logger.debug("AI response generated (%d chars)", len(ai_response))
+        except (AIConfigurationError, AIProviderError) as exc:
+            logger.error("AI provider error: %s", exc)
             ai_response = "I'm having trouble responding right now. Please try again."
 
         # Store AI response

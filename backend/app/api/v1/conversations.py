@@ -1,10 +1,9 @@
 # app/api/v1/conversations.py
 from __future__ import annotations
 
-from typing import Any
-from uuid import UUID
-
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
@@ -27,6 +26,14 @@ from app.services.conversation_service import ConversationService
 from app.services.gamification_service import GamificationService
 
 router = APIRouter(prefix="/conversations", tags=["AI Conversations"])
+
+def _make_limiter() -> Limiter:
+    import os
+    if os.environ.get("TESTING", "").lower() in ("1", "true", "yes"):
+        return Limiter(key_func=get_remote_address, enabled=False, default_limits=["100000/minute"])
+    return Limiter(key_func=get_remote_address)
+
+limiter = _make_limiter()
 
 
 def get_gamification_service(db: Session = Depends(get_db)) -> GamificationService:
@@ -55,7 +62,9 @@ def start_conversation(
 
 
 @router.post("/{session_id}/messages", response_model=AIResponse)
+@limiter.limit("30/minute")
 def send_message(
+    request: Request,
     session_id: UUID,
     payload: MessageSendRequest,
     current_user: User = Depends(get_current_active_user),

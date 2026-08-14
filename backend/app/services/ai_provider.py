@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from groq import Groq
 from app.core.config import settings
 from app.core.exceptions import AIConfigurationError, AIProviderError
+
+logger = logging.getLogger(__name__)
 
 
 class AIProvider:
@@ -23,7 +26,6 @@ class GroqProvider(AIProvider):
         if not settings.groq_api_key:
             raise AIConfigurationError("GROQ_API_KEY is not configured.")
         self.client = Groq(api_key=settings.groq_api_key)
-        # ✅ Currently supported model (as of 2026)
         self.model = "llama-3.3-70b-versatile"
         self.temperature = 0.7
         self.max_tokens = 500
@@ -42,28 +44,26 @@ class GroqProvider(AIProvider):
             AIProviderError: If API call fails
         """
         try:
-            formatted_messages = []
-            for msg in messages:
-                if isinstance(msg, dict) and "role" in msg and "content" in msg:
-                    formatted_messages.append({
-                        "role": msg["role"],
-                        "content": str(msg["content"])
-                    })
-            
-            print(f"📤 Sending to Groq: {len(formatted_messages)} messages")
-            
+            formatted_messages = [
+                {"role": msg["role"], "content": str(msg["content"])}
+                for msg in messages
+                if isinstance(msg, dict) and "role" in msg and "content" in msg
+            ]
+
+            logger.debug("Sending %d messages to Groq", len(formatted_messages))
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=formatted_messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
             )
-            
+
             return response.choices[0].message.content
 
-        except Exception as e:
-            print(f"❌ Groq API error: {str(e)}")
-            raise AIProviderError(f"Groq API error: {str(e)}") from e
+        except Exception as exc:
+            logger.error("Groq API error: %s", exc)
+            raise AIProviderError(f"Groq API error: {str(exc)}") from exc
 
 
 def get_ai_provider() -> AIProvider:

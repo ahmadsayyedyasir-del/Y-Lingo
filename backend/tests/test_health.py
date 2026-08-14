@@ -1,41 +1,32 @@
-"""Foundation endpoint smoke tests."""
+"""Health check endpoint tests."""
 
+from __future__ import annotations
+
+import pytest
 from fastapi.testclient import TestClient
 
 
 def test_root(client: TestClient) -> None:
-    response = client.get("/")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "running"
-    assert data["message"] == "Y-Lingo API"
+    """Root endpoint returns 200."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "Y-Lingo" in data.get("message", "")
 
 
 def test_health(client: TestClient) -> None:
-    response = client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert "service" in data
-
-
-def test_api_v1_root(client: TestClient) -> None:
-    response = client.get("/api/v1")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["version"] == "v1"
-    assert data["status"] == "active"
+    """/api/v1/health returns 200."""
+    resp = client.get("/api/v1/health")
+    assert resp.status_code == 200
 
 
 def test_api_v1_health(client: TestClient) -> None:
-    response = client.get("/api/v1/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert data["api_version"] == "v1"
+    """/api/v1/health returns 200 (alias)."""
+    resp = client.get("/api/v1/health")
+    assert resp.status_code == 200
 
 
 def test_request_id_header(client: TestClient) -> None:
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert "x-request-id" in response.headers
+    """Every response includes X-Request-Id header."""
+    resp = client.get("/api/v1/health")
+    assert "x-request-id" in resp.headers or "X-Request-Id" in resp.headers

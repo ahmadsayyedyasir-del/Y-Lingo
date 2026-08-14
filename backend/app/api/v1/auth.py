@@ -1,7 +1,9 @@
 """Authentication HTTP endpoints."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.api.deps import get_current_active_user, get_db
 from app.models.user import User
@@ -20,23 +22,34 @@ from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+def _make_limiter() -> Limiter:
+    import os
+    if os.environ.get("TESTING", "").lower() in ("1", "true", "yes"):
+        return Limiter(key_func=get_remote_address, enabled=False, default_limits=["100000/minute"])
+    return Limiter(key_func=get_remote_address)
+
+limiter = _make_limiter()
+
 
 @router.post(
     "/register",
     response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenResponse:
+@limiter.limit("5/minute")
+def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)) -> TokenResponse:
     return AuthService(db).register(payload)
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+@limiter.limit("10/minute")
+def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     return AuthService(db).login(payload)
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResponse:
+@limiter.limit("20/minute")
+def refresh(request: Request, payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResponse:
     return AuthService(db).refresh(payload.refresh_token)
 
 
@@ -56,16 +69,12 @@ def me(current_user: User = Depends(get_current_active_user)) -> UserResponse:
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("3/minute")
 def forgot_password(
+    request: Request,
     payload: ForgotPasswordRequest,
     db: Session = Depends(get_db),
 ) -> MessageResponse:
-    """
-    Send a 6-digit password reset OTP to the provided email address.
-
-    Always returns 200 regardless of whether the email exists —
-    this prevents email enumeration attacks.
-    """
     AuthService(db).request_password_reset(str(payload.email))
     return MessageResponse(
         detail="If an account with that email exists, a reset code has been sent.",
@@ -74,15 +83,12 @@ def forgot_password(
 
 
 @router.post("/reset-password", response_model=MessageResponse)
+@limiter.limit("5/minute")
 def reset_password(
+    request: Request,
     payload: ResetPasswordRequest,
     db: Session = Depends(get_db),
 ) -> MessageResponse:
-    """
-    Verify the 6-digit OTP and set a new password.
-
-    Returns 400 if the code is invalid, expired, or already used.
-    """
     AuthService(db).confirm_password_reset(
         email=str(payload.email),
         code=payload.code,
