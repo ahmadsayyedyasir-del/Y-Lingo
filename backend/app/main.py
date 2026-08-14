@@ -1,14 +1,17 @@
 """Y-Lingo API application entrypoint."""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.constants.app import API_DESCRIPTION, API_TITLE, API_VERSION
 from app.core.config import get_settings
+from app.core.exceptions import YLingoError, ylingo_exception_handler
 from app.core.logging import get_logger, setup_logging
 from app.middleware.request_id import RequestIdMiddleware
 
@@ -18,7 +21,6 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Application startup and shutdown hooks."""
     settings = get_settings()
     logger.info(
         "Starting %s | env=%s | debug=%s",
@@ -31,7 +33,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
-    """Application factory — explicit and testable."""
     settings = get_settings()
 
     application = FastAPI(
@@ -44,6 +45,8 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
     )
 
+    application.add_exception_handler(YLingoError, ylingo_exception_handler)
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -55,7 +58,6 @@ def create_app() -> FastAPI:
 
     @application.get("/", tags=["Root"])
     def root() -> dict:
-        """Root landing — confirms the process is reachable."""
         return {
             "message": "Y-Lingo API",
             "status": "running",
@@ -66,7 +68,6 @@ def create_app() -> FastAPI:
 
     @application.get("/health", tags=["Health"])
     def health() -> dict:
-        """Top-level liveness probe (platform-friendly path)."""
         return {
             "status": "ok",
             "service": settings.app_name,
@@ -75,16 +76,25 @@ def create_app() -> FastAPI:
 
     @application.get(settings.api_v1_prefix, tags=["API"])
     def api_v1_root() -> dict:
-        """Versioned API root for this phase."""
         return {
             "version": "v1",
             "status": "active",
             "endpoints": {
                 "health": f"{settings.api_v1_prefix}/health",
+                "register": f"{settings.api_v1_prefix}/auth/register",
+                "login": f"{settings.api_v1_prefix}/auth/login",
+                "refresh": f"{settings.api_v1_prefix}/auth/refresh",
+                "logout": f"{settings.api_v1_prefix}/auth/logout",
+                "me": f"{settings.api_v1_prefix}/auth/me",
             },
         }
 
     application.include_router(api_router, prefix=settings.api_v1_prefix)
+
+    # Avatar files written by LocalStorageService under static/avatars/
+    Path("static/avatars").mkdir(parents=True, exist_ok=True)
+    application.mount("/static", StaticFiles(directory="static"), name="static")
+
     return application
 
 

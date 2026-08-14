@@ -7,13 +7,10 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.db.base import Base
-
-# Register all models on Base.metadata
-from app.models import Profile, User, UserSettings  # noqa: F401
+from app.models import Profile, RefreshToken, User, UserSettings  # noqa: F401
 
 config = context.config
 settings = get_settings()
-
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
 if config.config_file_name is not None:
