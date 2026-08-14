@@ -77,10 +77,22 @@ Remember: You are a conversation partner, not a teacher during the call."""
         self,
         history: List[ConversationMessage],
         user_message: str,
+        rag_context: str | None = None,
     ) -> List[Dict[str, str]]:
-        """Build full prompt with system + conversation history + user message."""
+        """Build full prompt with system + RAG context + conversation history + user message."""
+        system_content = self.build_system_prompt()
+
+        # Inject RAG context into system prompt if available
+        if rag_context:
+            system_content += (
+                "\n\n---\n"
+                "DOCUMENT CONTEXT (use this knowledge when relevant to the conversation):\n"
+                f"{rag_context}"
+                "---\n"
+            )
+
         messages: List[Dict[str, str]] = [
-            {"role": "system", "content": self.build_system_prompt()}
+            {"role": "system", "content": system_content}
         ]
 
         # Add history (last 10 messages)

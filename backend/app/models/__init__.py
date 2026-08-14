@@ -20,6 +20,9 @@ from app.models.exercise import Exercise
 from app.models.user_lesson_progress import UserLessonProgress
 from app.models.user_exercise_attempt import UserExerciseAttempt
 
+# Phase 14 — IELTS
+from app.models.ielts_attempt import IELTSAttempt
+
 __all__ = [
     "User",
     "Profile",

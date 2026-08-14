@@ -109,9 +109,29 @@ class ConversationService:
             scenario=scenario,
             native_language=native_language,
         )
+
+        # RAG: inject relevant document context into the conversation prompt
+        rag_context: str | None = None
+        try:
+            from app.services.rag_service import RAGService
+            rag_service = RAGService(self.db)
+            results = rag_service.search(
+                user_id=session.user_id,
+                query=user_message,
+                top_k=3,
+                include_system=True,
+            )
+            if results:
+                rag_context = "Relevant context from uploaded documents:\n\n"
+                for i, r in enumerate(results, 1):
+                    rag_context += f"[{i}] {r['document']['title']}:\n{r['content']}\n\n"
+        except Exception:
+            rag_context = None  # RAG unavailable — proceed without it
+
         prompt_messages = conversation_manager.build_conversation_prompt(
             history=messages,
             user_message=user_message,
+            rag_context=rag_context,
         )
 
         # Get AI response

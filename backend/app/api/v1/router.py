@@ -9,6 +9,7 @@ from app.api.v1 import (
     dashboard,
     gamification,
     health,
+    ielts,
     lesson_progress,
     profile,
     settings,
@@ -48,3 +49,6 @@ api_router.include_router(upload.router)
 
 # ✅ Voice endpoints (STT via Groq Whisper + TTS via ElevenLabs)
 api_router.include_router(voice.router)
+
+# ✅ IELTS endpoints (writing eval, speaking eval, score saving, dashboard)
+api_router.include_router(ielts.router)
