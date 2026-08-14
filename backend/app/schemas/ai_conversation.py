@@ -21,17 +21,24 @@ class MessageSendRequest(BaseModel):
 
     message: str = Field(..., min_length=1, max_length=2000)
     language: str = Field(..., min_length=1, max_length=50)
-    level: str = Field(default="beginner")
+    level: str = Field(default="intermediate")
+    scenario: str = Field(default="casual")
 
 
 class AIResponse(BaseModel):
-    """AI response with coaching feedback."""
+    """AI response with coaching feedback and gamification event."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     response: str
     grammar_corrections: list[dict] = Field(default_factory=list)
     vocabulary_suggestions: list[dict] = Field(default_factory=list)
+    # Gamification — present when XP was awarded, None if gamification was unavailable
+    xp_earned: int | None = None
+    total_xp: int | None = None
+    level: int | None = None
+    leveled_up: bool = False
+    newly_unlocked_achievements: list[dict] = Field(default_factory=list)
 
 
 class MessageResponse(BaseModel):

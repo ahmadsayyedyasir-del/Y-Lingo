@@ -77,7 +77,18 @@ def send_message(
     )
 
     # Award XP for sending a message — best-effort, never raises
-    gamification.award_message_xp(current_user)
+    gam_result = gamification.award_message_xp(current_user)
+
+    # Attach gamification event to response so frontend can show XP toast
+    if gam_result is not None:
+        result["xp_earned"] = gam_result.xp_earned
+        result["total_xp"] = gam_result.total_xp
+        result["level"] = gam_result.level
+        result["leveled_up"] = gam_result.leveled_up
+        result["newly_unlocked_achievements"] = [
+            {"code": a.code, "name": a.name, "description": a.description}
+            for a in gam_result.newly_unlocked_achievements
+        ]
 
     return result
 
