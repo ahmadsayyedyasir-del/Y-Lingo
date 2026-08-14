@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { conversationEndpoints, voiceEndpoints, profileEndpoints } from '@/lib/endpoints';
 import ConversationManager, { ConversationManagerRef } from './ConversationManager';
 import CoachingReport from '@/components/chat/CoachingReport';
+import XPToast, { XPEvent } from '@/components/gamification/XPToast';
 
 interface VoiceCallProps {
   scenario: string;
@@ -64,6 +65,7 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
   const [report, setReport] = useState<unknown>(null);
   const [showReport, setShowReport] = useState(false);
   const [nativeLanguage, setNativeLanguage] = useState('ur');
+  const [xpEvent, setXpEvent] = useState<XPEvent | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationManagerRef = useRef<ConversationManagerRef>(null);
@@ -267,6 +269,17 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
         { id: (Date.now() + 1).toString(), role: 'assistant', content: aiText, timestamp: new Date() },
       ]);
 
+      // Show XP toast if gamification data present
+      if (response.data.xp_earned != null) {
+        setXpEvent({
+          xp_earned: response.data.xp_earned,
+          total_xp: response.data.total_xp,
+          level: response.data.level,
+          leveled_up: response.data.leveled_up ?? false,
+          newly_unlocked_achievements: response.data.newly_unlocked_achievements ?? [],
+        });
+      }
+
       setTimeout(() => speakText(aiText), 200);
     } catch {
       setError('Failed to get a response. Please try again.');
@@ -469,6 +482,9 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
           onClose={closeReport}
         />
       )}
+
+      {/* XP Toast — bottom right */}
+      <XPToast event={xpEvent} onDismiss={() => setXpEvent(null)} />
     </div>
   );
 }
