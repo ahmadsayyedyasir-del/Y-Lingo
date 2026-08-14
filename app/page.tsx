@@ -1,19 +1,25 @@
-import Navbar from "@/components/landing/Navbar";
-import Hero from "@/components/landing/Hero";
-import Features from "@/components/landing/Features";
-import WhyYLingo from "@/components/landing/WhyYLingo";
-import CTA from "@/components/landing/CTA";
-import Footer from "@/components/landing/Footer";
-export default function Home() {
-  return (
-    <main className="min-h-screen bg-black text-white">
-      <Navbar />
-      <Hero />
-      <Features />
-      <WhyYLingo />
-      <CTA />
-      <Footer />
-    </main>
-   
-  );
+// app/page.tsx
+// Root route — redirect authenticated users to /dashboard,
+// unauthenticated users to /login.
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+
+export default function RootPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Show nothing while redirecting
+  return null;
 }
