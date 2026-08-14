@@ -11,8 +11,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.db.mixins import TimestampMixin
 
+# Add this import at the top (outside TYPE_CHECKING)
+from app.models.rag_document import RAGDocument
+
 if TYPE_CHECKING:
     from app.models.profile import Profile
+    from app.models.refresh_token import RefreshToken
     from app.models.user_settings import UserSettings
 
 
@@ -31,6 +35,7 @@ class User(TimestampMixin, Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
     profile: Mapped[Profile | None] = relationship(
         "Profile",
@@ -43,6 +48,18 @@ class User(TimestampMixin, Base):
         "UserSettings",
         back_populates="user",
         uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    refresh_tokens: Mapped[list[RefreshToken]] = relationship(
+        "RefreshToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    rag_documents: Mapped[list[RAGDocument]] = relationship(
+        "RAGDocument",
+        back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )

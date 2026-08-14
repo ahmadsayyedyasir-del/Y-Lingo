@@ -1,9 +1,8 @@
-"""initial user profile settings
+"""initial tables
 
 Revision ID: 20260804_0001
 Revises:
 Create Date: 2026-08-04
-
 """
 
 from typing import Sequence, Union
@@ -30,11 +29,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email"),
-        sa.UniqueConstraint("username"),
     )
-    op.create_index(op.f("ix_users_email"), "users", ["email"], unique=True)
-    op.create_index(op.f("ix_users_username"), "users", ["username"], unique=True)
+    op.create_index("ix_users_email", "users", ["email"], unique=True)
+    op.create_index("ix_users_username", "users", ["username"], unique=True)
 
     op.create_table(
         "profiles",
@@ -53,7 +50,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id"),
     )
-    op.create_index(op.f("ix_profiles_user_id"), "profiles", ["user_id"], unique=True)
+    op.create_index("ix_profiles_user_id", "profiles", ["user_id"], unique=True)
 
     op.create_table(
         "user_settings",
@@ -72,14 +69,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id"),
     )
-    op.create_index(op.f("ix_user_settings_user_id"), "user_settings", ["user_id"], unique=True)
+    op.create_index("ix_user_settings_user_id", "user_settings", ["user_id"], unique=True)
 
 
 def downgrade() -> None:
-    op.drop_index(op.f("ix_user_settings_user_id"), table_name="user_settings")
     op.drop_table("user_settings")
-    op.drop_index(op.f("ix_profiles_user_id"), table_name="profiles")
     op.drop_table("profiles")
-    op.drop_index(op.f("ix_users_username"), table_name="users")
-    op.drop_index(op.f("ix_users_email"), table_name="users")
     op.drop_table("users")

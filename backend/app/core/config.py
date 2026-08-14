@@ -17,8 +17,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = Field(default="Y-Lingo API", description="Service display name")
-    app_env: str = Field(default="development", description="development | staging | production")
+    app_name: str = Field(default="Y-Lingo API")
+    app_env: str = Field(default="development")
     debug: bool = Field(default=False)
     api_v1_prefix: str = Field(default="/api/v1")
 
@@ -27,15 +27,46 @@ class Settings(BaseSettings):
 
     cors_origins: str = Field(
         default="http://localhost:3000,http://127.0.0.1:3000",
-        description="Comma-separated allowed origins",
     )
 
     database_url: str = Field(
-        default="postgresql+psycopg2://user:password@localhost:5432/ylingodb",
-        description="SQLAlchemy database URL (used from DB phase onward)",
+        default="postgresql+psycopg://user:password@localhost:5432/ylingodb",
     )
 
     log_level: str = Field(default="INFO")
+
+    jwt_secret: str = Field(
+        default="CHANGE-ME-IN-PRODUCTION-USE-A-LONG-RANDOM-SECRET",
+        description="HMAC secret for access tokens",
+    )
+    jwt_algorithm: str = Field(default="HS256")
+    access_token_expire_minutes: int = Field(default=30)
+    refresh_token_expire_days: int = Field(default=14)
+
+    # Groq API Key
+    groq_api_key: str | None = Field(default=None, description="Groq API key for AI conversations")
+
+    # OpenAI API Key (Optional - for voice features)
+    openai_api_key: str | None = Field(default=None, description="OpenAI API key for STT/TTS")
+
+    # AI Provider Configuration
+    ai_provider: str = Field(default="groq", description="AI provider: groq, openai")
+    ai_model: str = Field(default="llama-3.3-70b-versatile", description="AI model name")
+
+    # ✅ ADD THIS LINE
+    embedding_provider: str | None = Field(default=None, description="Embedding provider: sentence-transformers, openai")
+
+    # Email / SMTP settings (used for password reset OTP)
+    smtp_host: str = Field(default="smtp.gmail.com", description="SMTP server host")
+    smtp_port: int = Field(default=587, description="SMTP server port (587=TLS, 465=SSL)")
+    smtp_username: str | None = Field(default=None, description="SMTP login username / email address")
+    smtp_password: str | None = Field(default=None, description="SMTP login password or app password")
+    smtp_from_email: str | None = Field(default=None, description="From address shown in sent emails")
+    smtp_from_name: str = Field(default="Y-Lingo", description="From name shown in sent emails")
+    smtp_use_tls: bool = Field(default=True, description="Use STARTTLS (port 587)")
+
+    # Password reset OTP settings
+    password_reset_code_expire_minutes: int = Field(default=15, description="OTP validity in minutes")
 
     @field_validator("app_env")
     @classmethod
@@ -53,5 +84,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Cached settings instance — safe for FastAPI Depends."""
     return Settings()
+
+
+settings = get_settings()
