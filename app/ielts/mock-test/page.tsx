@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import { ieltsEndpoints } from '@/lib/endpoints';
 
 interface Question {
   id: number;
@@ -57,17 +58,18 @@ export default function IELTSMockTestPage() {
     setAnswers({ ...answers, [questionId]: value });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let correct = 0;
     sections.forEach((section) => {
       section.questions.forEach((q) => {
-        if (q.correctAnswer && answers[q.id]?.trim() === q.correctAnswer) {
-          correct++;
-        }
+        if (q.correctAnswer && answers[q.id]?.trim() === q.correctAnswer) correct++;
       });
     });
     setScore(correct);
     setSubmitted(true);
+    try {
+      await ieltsEndpoints.saveScore('mock', correct, totalQuestions);
+    } catch { /* non-blocking */ }
   };
 
   if (isLoading) {

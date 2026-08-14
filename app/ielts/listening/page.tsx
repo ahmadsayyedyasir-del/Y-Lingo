@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import { ieltsEndpoints } from '@/lib/endpoints';
 
 export default function IELTSListeningPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -36,15 +37,16 @@ export default function IELTSListeningPage() {
     setAnswers({ ...answers, [id]: value });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let correct = 0;
     questions.forEach((q) => {
-      if (answers[q.id]?.toLowerCase().trim() === q.correctAnswer) {
-        correct++;
-      }
+      if (answers[q.id]?.toLowerCase().trim() === q.correctAnswer) correct++;
     });
     setScore(correct);
     setSubmitted(true);
+    try {
+      await ieltsEndpoints.saveScore('listening', correct, questions.length);
+    } catch { /* non-blocking */ }
   };
 
   if (isLoading) {

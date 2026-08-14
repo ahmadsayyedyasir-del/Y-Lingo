@@ -335,8 +335,56 @@ export const ragEndpoints = {
 };
 
 // ============================================================
-// Voice
+// IELTS
 // ============================================================
+
+export const ieltsEndpoints = {
+  evaluateWriting: (
+    taskType: string,
+    taskPrompt: string,
+    essayText: string,
+  ) => {
+    const form = new FormData();
+    form.append('task_type', taskType);
+    form.append('task_prompt', taskPrompt);
+    form.append('essay_text', essayText);
+    return apiClient.post('/ielts/writing/evaluate', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  evaluateSpeakingAudio: (part: number, question: string, file: File) => {
+    const form = new FormData();
+    form.append('part', String(part));
+    form.append('question', question);
+    form.append('file', file);
+    return apiClient.post('/ielts/speaking/evaluate', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  evaluateSpeakingText: (part: number, question: string, responseText: string) => {
+    const form = new FormData();
+    form.append('part', String(part));
+    form.append('question', question);
+    form.append('response_text', responseText);
+    return apiClient.post('/ielts/speaking/evaluate-text', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  saveScore: (skill: string, rawScore: number, maxScore: number) => {
+    const form = new FormData();
+    form.append('skill', skill);
+    form.append('raw_score', String(rawScore));
+    form.append('max_score', String(maxScore));
+    return apiClient.post('/ielts/score', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  getHistory: () => apiClient.get('/ielts/history'),
+};
 
 export const voiceEndpoints = {
   transcribe: (file: File, language: string = 'en') => {

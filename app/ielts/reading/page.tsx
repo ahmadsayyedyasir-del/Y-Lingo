@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import { ieltsEndpoints } from '@/lib/endpoints';
 
 interface Question {
   id: number;
@@ -12,7 +13,6 @@ interface Question {
   question: string;
   options?: string[];
   correctAnswer: string;
-  userAnswer?: string;
 }
 
 export default function IELTSReadingPage() {
@@ -60,15 +60,17 @@ export default function IELTSReadingPage() {
     setAnswers({ ...answers, [questionId]: answer });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let correct = 0;
     questions.forEach((q) => {
-      if (answers[q.id] === q.correctAnswer) {
-        correct++;
-      }
+      if (answers[q.id] === q.correctAnswer) correct++;
     });
     setScore(correct);
     setSubmitted(true);
+    // Persist score to DB
+    try {
+      await ieltsEndpoints.saveScore('reading', correct, questions.length);
+    } catch { /* non-blocking */ }
   };
 
   if (isLoading) {
