@@ -1,26 +1,121 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ─── Theme CSS Variables ──────────────────────────────────────────────────── */
+/* Default = dark theme */
+:root,
+[data-theme="dark"] {
+  --bg-base:        #030712;   /* gray-950 */
+  --bg-surface:     #111827;   /* gray-900 */
+  --bg-elevated:    #1f2937;   /* gray-800 */
+  --bg-card:        rgba(17, 24, 39, 0.5);
+  --border-color:   #1f2937;   /* gray-800 */
+  --text-primary:   #f9fafb;   /* gray-50  */
+  --text-secondary: #9ca3af;   /* gray-400 */
+  --text-muted:     #6b7280;   /* gray-500 */
+  --nav-bg:         rgba(17, 24, 39, 0.9);
+
+  color-scheme: dark;
 }
 
+[data-theme="light"] {
+  --bg-base:        #f9fafb;   /* gray-50  */
+  --bg-surface:     #ffffff;
+  --bg-elevated:    #f3f4f6;   /* gray-100 */
+  --bg-card:        rgba(255, 255, 255, 0.8);
+  --border-color:   #e5e7eb;   /* gray-200 */
+  --text-primary:   #111827;   /* gray-900 */
+  --text-secondary: #4b5563;   /* gray-600 */
+  --text-muted:     #9ca3af;   /* gray-400 */
+  --nav-bg:         rgba(255, 255, 255, 0.9);
+
+  color-scheme: light;
+}
+
+/* ─── Tailwind 4 theme tokens ──────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base styles ──────────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ─── Utility overrides for theme-aware components ──────────────────────────── */
+/* These override Tailwind's hardcoded gray-950/gray-900 bg classes
+   so the whole app responds to the theme without touching every page. */
+
+[data-theme="light"] .bg-gray-950 {
+  background-color: var(--bg-base) !important;
+}
+
+[data-theme="light"] .bg-gray-900\/50,
+[data-theme="light"] .bg-gray-900\/30 {
+  background-color: var(--bg-card) !important;
+}
+
+[data-theme="light"] .bg-gray-900 {
+  background-color: var(--bg-surface) !important;
+}
+
+[data-theme="light"] .bg-gray-800\/50,
+[data-theme="light"] .bg-gray-800\/60,
+[data-theme="light"] .bg-gray-800\/30 {
+  background-color: var(--bg-elevated) !important;
+}
+
+[data-theme="light"] .border-gray-800 {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="light"] .border-gray-700 {
+  border-color: #d1d5db !important;
+}
+
+[data-theme="light"] .text-white {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .text-gray-200,
+[data-theme="light"] .text-gray-300 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .text-gray-400 {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] .text-gray-500,
+[data-theme="light"] .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+/* Navbar in light mode */
+[data-theme="light"] nav.bg-gray-900\/90 {
+  background-color: var(--nav-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 3px;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #d1d5db;
 }

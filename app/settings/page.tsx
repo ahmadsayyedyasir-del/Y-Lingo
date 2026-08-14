@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { settingsEndpoints } from '@/lib/endpoints';
+import { useTheme } from '@/context/ThemeContext';
+import { LoadingSpinner } from '@/components/ui/Skeleton';
 
 interface SettingsData {
   id: string;
@@ -36,6 +38,7 @@ interface ApiError {
 export default function SettingsPage() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
+  const { setTheme } = useTheme();
   
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,23 +96,21 @@ export default function SettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🟢 Save Settings button clicked!');
-    console.log('📤 Form data:', formData);
-    
     setError('');
     setSuccess('');
     setIsSubmitting(true);
 
     try {
       const response = await settingsEndpoints.update(formData);
-      console.log('✅ Settings updated:', response.data);
       setSuccess('Settings updated successfully!');
-      
+
+      // Apply theme immediately
+      setTheme(formData.theme as 'dark' | 'light' | 'system');
+
       const refreshResponse = await settingsEndpoints.get();
       setSettings(refreshResponse.data);
       
     } catch (err) {
-      console.error('❌ Settings update error:', err);
       const apiError = err as ApiError;
       const detail = apiError?.response?.data?.detail;
       
@@ -126,11 +127,7 @@ export default function SettingsPage() {
   };
 
   if (isLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading settings..." />;
   }
 
   if (!isAuthenticated || !user) {

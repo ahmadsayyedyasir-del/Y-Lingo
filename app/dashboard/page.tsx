@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import { dashboardEndpoints, gamificationEndpoints, profileEndpoints } from '@/lib/endpoints';
+import { SkeletonDashboard } from '@/components/ui/Skeleton';
 
 interface GamificationData {
   total_xp: number;
@@ -82,8 +83,9 @@ export default function DashboardPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="text-white text-xl">Loading dashboard...</div>
+      <div className="min-h-screen bg-gray-950">
+        <Navbar />
+        <SkeletonDashboard />
       </div>
     );
   }

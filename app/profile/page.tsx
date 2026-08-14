@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
 import { profileEndpoints } from '@/lib/endpoints';
+import { SkeletonProfile } from '@/components/ui/Skeleton';
 
 interface UserProfile {
   id?: string;
@@ -392,8 +393,9 @@ export default function ProfilePage() {
   // ============================================================
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen bg-gray-950">
+        <Navbar />
+        <SkeletonProfile />
       </div>
     );
   }

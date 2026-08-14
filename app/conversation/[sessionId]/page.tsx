@@ -9,6 +9,7 @@ import ChatMessage from '@/components/chat/ChatMessage';
 import ChatInput from '@/components/chat/ChatInput';
 import CoachingReport from '@/components/chat/CoachingReport';
 import XPToast, { XPEvent } from '@/components/gamification/XPToast';
+import { LoadingSpinner } from '@/components/ui/Skeleton';
 
 interface Message {
   id: string;
@@ -166,11 +167,7 @@ export default function ConversationPage() {
   };
 
   if (isLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <div className="text-white text-xl">Loading conversation...</div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading conversation..." />;
   }
 
   if (!isAuthenticated) return null;
