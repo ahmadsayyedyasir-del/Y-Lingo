@@ -20,6 +20,7 @@ from app.core.exceptions import (
     UsernameAlreadyExistsError,
 )
 from app.core.security import create_access_token, hash_password, verify_password
+from app.models.email_verification_code import EmailVerificationCode
 from app.models.password_reset_code import PasswordResetCode
 from app.models.user import User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
@@ -27,6 +28,134 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 from app.schemas.user import UserResponse
 from app.services.email_service import get_email_service
+
+_VERIFY_EXPIRE_MINUTES = 30
+
+
+class AuthService:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+        self.users = UserRepository(db)
+        self.refresh_tokens = RefreshTokenRepository(db)
+        self.settings = get_settings()
+
+    def register(self, payload: RegisterRequest) -> TokenResponse:
+        if self.users.get_by_email(str(payload.email)):
+            raise EmailAlreadyExistsError()
+        if self.users.get_by_username(payload.username):
+            raise UsernameAlreadyExistsError()
+
+        try:
+            user = self.users.create_user_with_defaults(
+                full_name=payload.full_name,
+                username=payload.username,
+                email=str(payload.email),
+                hashed_password=hash_password(payload.password),
+            )
+            tokens = self._issue_tokens(user)
+            self.db.commit()
+            self.db.refresh(user)
+
+            # Send verification email (best-effort — don't block registration)
+            try:
+                self._send_verification_email(user)
+            except Exception:
+                pass  # Email sending failed — user can request resend later
+
+            return tokens
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def login(self, payload: LoginRequest) -> TokenResponse:
+        user = self.users.get_by_email(str(payload.email))
+        if user is None or not verify_password(payload.password, user.hashed_password):
+            raise InvalidCredentialsError()
+        if not user.is_active:
+            raise InactiveUserError()
+
+        # Block login if email not verified
+        if not user.is_verified:
+            from app.core.exceptions import EmailNotVerifiedError
+            raise EmailNotVerifiedError()
+
+        try:
+            tokens = self._issue_tokens(user)
+            self.db.commit()
+            return tokens
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def verify_email(self, email: str, code: str) -> None:
+        """Verify email with 6-digit OTP. Marks user as verified."""
+        user = self.users.get_by_email(email)
+        if user is None:
+            raise InvalidResetCodeError()
+
+        if user.is_verified:
+            return  # Already verified — silent success
+
+        now = datetime.now(timezone.utc)
+        record = (
+            self.db.query(EmailVerificationCode)
+            .filter(
+                EmailVerificationCode.user_id == user.id,
+                EmailVerificationCode.code == code,
+                EmailVerificationCode.is_used == False,  # noqa: E712
+                EmailVerificationCode.expires_at > now,
+            )
+            .first()
+        )
+
+        if record is None:
+            raise InvalidResetCodeError()
+
+        record.is_used = True
+        user.is_verified = True
+
+        try:
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def resend_verification_email(self, email: str) -> None:
+        """Resend verification OTP. Silent if email not found (no enumeration)."""
+        user = self.users.get_by_email(email)
+        if user is None or user.is_verified:
+            return
+        try:
+            self._send_verification_email(user)
+        except RuntimeError as exc:
+            raise EmailServiceError(str(exc)) from exc
+
+    def _send_verification_email(self, user: User) -> None:
+        """Generate OTP, persist, and send verification email."""
+        # Invalidate previous unused codes
+        self.db.query(EmailVerificationCode).filter(
+            EmailVerificationCode.user_id == user.id,
+            EmailVerificationCode.is_used == False,  # noqa: E712
+        ).update({"is_used": True})
+
+        otp = "".join(random.choices(string.digits, k=6))
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=_VERIFY_EXPIRE_MINUTES)
+
+        self.db.add(EmailVerificationCode(
+            id=uuid4(),
+            user_id=user.id,
+            code=otp,
+            is_used=False,
+            expires_at=expires_at,
+        ))
+        self.db.flush()
+
+        email_svc = get_email_service()
+        email_svc.send_email_verification_otp(
+            to_email=user.email,
+            to_name=user.full_name,
+            otp_code=otp,
+        )
 
 
 class AuthService:

@@ -26,61 +26,78 @@ class EmailService:
         self.settings = get_settings()
 
     def send_password_reset_otp(self, *, to_email: str, to_name: str, otp_code: str) -> None:
-        """
-        Send a 6-digit password reset OTP to the user's email address.
-
-        Raises:
-            RuntimeError: If SMTP credentials are not configured or sending fails.
-        """
+        """Send a 6-digit password reset OTP to the user's email address."""
         subject = "Your Y-Lingo Password Reset Code"
-
-        # Plain-text body
         text_body = (
             f"Hi {to_name},\n\n"
             f"You requested a password reset for your Y-Lingo account.\n\n"
-            f"Your verification code is:\n\n"
-            f"    {otp_code}\n\n"
+            f"Your verification code is:\n\n    {otp_code}\n\n"
             f"This code is valid for {self.settings.password_reset_code_expire_minutes} minutes.\n\n"
             f"If you did not request a password reset, please ignore this email.\n\n"
             f"— The Y-Lingo Team"
         )
+        html_body = self._otp_html(
+            title="Password Reset",
+            intro=f"You requested a password reset for your Y-Lingo account. Use the code below to set a new password.",
+            otp_code=otp_code,
+            expire_minutes=self.settings.password_reset_code_expire_minutes,
+            footer_note="If you did not request a password reset, please ignore this email.",
+            to_name=to_name,
+        )
+        self._send(to_email=to_email, subject=subject, text_body=text_body, html_body=html_body)
 
-        # HTML body
-        html_body = f"""
+    def send_email_verification_otp(self, *, to_email: str, to_name: str, otp_code: str) -> None:
+        """Send a 6-digit email verification OTP after registration."""
+        subject = "Verify Your Y-Lingo Account"
+        text_body = (
+            f"Hi {to_name},\n\n"
+            f"Welcome to Y-Lingo! Please verify your email address.\n\n"
+            f"Your verification code is:\n\n    {otp_code}\n\n"
+            f"This code is valid for 30 minutes.\n\n"
+            f"— The Y-Lingo Team"
+        )
+        html_body = self._otp_html(
+            title="Verify Your Email",
+            intro="Welcome to Y-Lingo! Enter this code to verify your email address and start practicing.",
+            otp_code=otp_code,
+            expire_minutes=30,
+            footer_note="If you did not create a Y-Lingo account, please ignore this email.",
+            to_name=to_name,
+        )
+        self._send(to_email=to_email, subject=subject, text_body=text_body, html_body=html_body)
+
+    def _otp_html(
+        self,
+        *,
+        title: str,
+        intro: str,
+        otp_code: str,
+        expire_minutes: int,
+        footer_note: str,
+        to_name: str,
+    ) -> str:
+        return f"""
         <html>
           <body style="font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; padding: 32px;">
             <div style="max-width: 480px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 32px;">
-              <h2 style="color: #60a5fa; margin-bottom: 8px;">Password Reset</h2>
+              <h2 style="color: #60a5fa; margin-bottom: 8px;">{title}</h2>
               <p style="color: #94a3b8;">Hi <strong style="color: #f1f5f9;">{to_name}</strong>,</p>
-              <p style="color: #94a3b8;">
-                You requested a password reset for your Y-Lingo account.
-                Use the code below to set a new password.
-              </p>
+              <p style="color: #94a3b8;">{intro}</p>
               <div style="background: #0f172a; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
                 <span style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #60a5fa;">
                   {otp_code}
                 </span>
               </div>
               <p style="color: #94a3b8; font-size: 13px;">
-                This code expires in
-                <strong style="color: #f1f5f9;">
-                  {self.settings.password_reset_code_expire_minutes} minutes
-                </strong>.
+                This code expires in <strong style="color: #f1f5f9;">{expire_minutes} minutes</strong>.
               </p>
-              <p style="color: #475569; font-size: 12px; margin-top: 24px;">
-                If you did not request a password reset, please ignore this email.
-                Your password will not be changed.
-              </p>
+              <p style="color: #475569; font-size: 12px; margin-top: 24px;">{footer_note}</p>
               <hr style="border-color: #334155; margin: 24px 0;" />
-              <p style="color: #475569; font-size: 12px; text-align: center;">
-                — The Y-Lingo Team
-              </p>
+              <p style="color: #475569; font-size: 12px; text-align: center;">— The Y-Lingo Team</p>
             </div>
           </body>
         </html>
         """
-
-        self._send(to_email=to_email, subject=subject, text_body=text_body, html_body=html_body)
 
     def _send(
         self,

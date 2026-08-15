@@ -14,8 +14,10 @@ from app.schemas.auth import (
     MessageResponse,
     RefreshRequest,
     RegisterRequest,
+    ResendVerificationRequest,
     ResetPasswordRequest,
     TokenResponse,
+    VerifyEmailRequest,
 )
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
@@ -97,4 +99,36 @@ def reset_password(
     return MessageResponse(
         detail="Password has been reset successfully. You can now log in.",
         code="PASSWORD_RESET_SUCCESS",
+    )
+
+
+# ── Email Verification ────────────────────────────────────────────────────────
+
+@router.post("/verify-email", response_model=MessageResponse)
+@limiter.limit("10/minute")
+def verify_email(
+    request: Request,
+    payload: VerifyEmailRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    """Verify email address using the 6-digit OTP sent after registration."""
+    AuthService(db).verify_email(email=str(payload.email), code=payload.code)
+    return MessageResponse(
+        detail="Email verified successfully. You can now log in.",
+        code="EMAIL_VERIFIED",
+    )
+
+
+@router.post("/resend-verification", response_model=MessageResponse)
+@limiter.limit("3/minute")
+def resend_verification(
+    request: Request,
+    payload: ResendVerificationRequest,
+    db: Session = Depends(get_db),
+) -> MessageResponse:
+    """Resend email verification OTP. Always returns 200 (no enumeration)."""
+    AuthService(db).resend_verification_email(email=str(payload.email))
+    return MessageResponse(
+        detail="If an account with that email exists and is unverified, a new code has been sent.",
+        code="VERIFICATION_SENT",
     )

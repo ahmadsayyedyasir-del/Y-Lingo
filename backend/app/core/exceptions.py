@@ -277,6 +277,16 @@ class EmailServiceError(YLingoError):
         )
 
 
+class EmailNotVerifiedError(YLingoError):
+    """Raised when user tries to login without verifying their email."""
+    def __init__(self) -> None:
+        super().__init__(
+            message="Please verify your email address before logging in. Check your inbox for the verification code.",
+            code="EMAIL_NOT_VERIFIED",
+            status_code=403,
+        )
+
+
 async def ylingo_exception_handler(_request: Request, exc: YLingoError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,

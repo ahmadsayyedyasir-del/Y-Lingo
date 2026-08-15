@@ -121,3 +121,20 @@ class ResetPasswordRequest(BaseModel):
         if not _PASSWORD_SPECIAL.search(value):
             raise ValueError("Password must include a special character.")
         return value
+
+
+class VerifyEmailRequest(BaseModel):
+    """Verify email address with 6-digit OTP."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class ResendVerificationRequest(BaseModel):
+    """Request a new verification email."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    email: EmailStr

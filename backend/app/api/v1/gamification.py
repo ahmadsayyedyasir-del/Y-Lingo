@@ -66,3 +66,47 @@ def get_achievement_catalog(
         for definition in ACHIEVEMENTS
     ]
     return AchievementCatalogResponse(items=items)
+
+
+@router.get("/leaderboard")
+def get_leaderboard(
+    type: str = "xp",
+    limit: int = 20,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Return top users by XP (type=xp) or streak (type=streak).
+    Each entry includes rank, username, full_name, xp/streak, level.
+    """
+    from app.repositories.user_repository import UserRepository
+
+    gam_repo = GamificationProfileRepository(db)
+    user_repo = UserRepository(db)
+
+    if type == "streak":
+        profiles = gam_repo.get_top_by_streak(limit=min(limit, 50))
+    else:
+        profiles = gam_repo.get_top_by_xp(limit=min(limit, 50))
+
+    entries = []
+    for rank, gp in enumerate(profiles, 1):
+        user = user_repo.get_by_id(gp.user_id)
+        if user is None:
+            continue
+        entries.append({
+            "rank": rank,
+            "user_id": str(gp.user_id),
+            "username": user.username,
+            "full_name": user.full_name,
+            "total_xp": gp.total_xp,
+            "level": (gp.total_xp // 100) + 1,
+            "current_streak_days": gp.current_streak_days,
+            "is_current_user": gp.user_id == current_user.id,
+        })
+
+    return {
+        "type": type,
+        "entries": entries,
+        "total": len(entries),
+    }
