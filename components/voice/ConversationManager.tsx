@@ -258,9 +258,9 @@ const ConversationManager = forwardRef<ConversationManagerRef, ConversationManag
 
         const data = new Uint8Array(analyser.fftSize);
         let silentMs = 0;
-        const SILENCE_THRESHOLD = 8;  // slightly lower for more sensitivity
+        const SILENCE_THRESHOLD = 8;
         const CHECK_INTERVAL = 200;
-        const SILENCE_LIMIT_MS = 4000;
+        const SILENCE_LIMIT_MS = 2000; // 2 seconds silence → stop
 
         silenceCheckIntervalRef.current = setInterval(() => {
           if (!analyserRef.current) return;
@@ -322,7 +322,7 @@ const ConversationManager = forwardRef<ConversationManagerRef, ConversationManag
           else interim = part;
         }
         setTranscript(interim || finalText);
-        silenceTimerRef.current = setTimeout(() => recognition.stop(), 4000);
+        silenceTimerRef.current = setTimeout(() => recognition.stop(), 2000); // 2s silence
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

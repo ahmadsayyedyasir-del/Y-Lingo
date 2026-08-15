@@ -142,32 +142,58 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
 
   const speakWithBrowserFallback = (text: string) => {
     if (!('speechSynthesis' in window)) {
-      // No TTS available at all — just start listening
       _afterSpeaking();
       return;
     }
     window.speechSynthesis.cancel();
     conversationManagerRef.current?.stopListening();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Strip emojis — browser TTS reads emoji codes aloud (e.g. "party popper")
+    const cleanText = text
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')  // emojis
+      .replace(/👋|🌍|🌅|📚|📊|💬|💼|✈️/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText || text);
     utterance.lang = 'en-US';
     utterance.rate = level === 'beginner' ? 0.85 : level === 'intermediate' ? 0.95 : 1.0;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
-    // Use best English voice available
-    const voices = window.speechSynthesis.getVoices();
-    const preferred =
-      voices.find((v) => v.lang.startsWith('en') && v.localService) ||
-      voices.find((v) => v.lang.startsWith('en')) ||
-      voices[0];
-    if (preferred) utterance.voice = preferred;
+    const _speak = () => {
+      // Reload voices list — must be done after speechSynthesis is ready
+      const voices = window.speechSynthesis.getVoices();
+      const preferred =
+        voices.find(v => /en[-_]US/i.test(v.lang) && v.localService) ||
+        voices.find(v => /en[-_]US/i.test(v.lang)) ||
+        voices.find(v => v.lang.startsWith('en') && v.localService) ||
+        voices.find(v => v.lang.startsWith('en')) ||
+        voices[0];
+      if (preferred) utterance.voice = preferred;
 
-    utterance.onend = _afterSpeaking;
-    utterance.onerror = _afterSpeaking;
-    setIsSpeaking(true);
-    setConversationStatus('idle');
-    window.speechSynthesis.speak(utterance);
+      utterance.onend = _afterSpeaking;
+      utterance.onerror = () => _afterSpeaking();
+      setIsSpeaking(true);
+      setConversationStatus('idle');
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Voices may not be loaded yet on first call — wait if empty
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      _speak();
+    } else {
+      // Wait for voiceschanged event
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        _speak();
+      };
+      // Safety timeout: speak anyway after 500ms even if event never fires
+      setTimeout(() => {
+        if (!isSpeaking) _speak();
+      }, 500);
+    }
   };
 
   const speakText = async (text: string) => {
@@ -269,9 +295,11 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
       });
 
       const aiText = response.data.response;
+      // Strip emojis from the text before TTS — keep original for display
+      const aiTextForDisplay = aiText;
       setMessages((prev) => [
         ...prev,
-        { id: (Date.now() + 1).toString(), role: 'assistant', content: aiText, timestamp: new Date() },
+        { id: (Date.now() + 1).toString(), role: 'assistant', content: aiTextForDisplay, timestamp: new Date() },
       ]);
 
       // Show XP toast if gamification data present
@@ -471,7 +499,7 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
               {isSpeaking
                 ? '🔊 AI is speaking... tap Stop to interrupt'
                 : conversationStatus === 'listening'
-                ? '🔴 Listening — speak naturally (4s silence auto-stops)'
+                ? '🔴 Listening — speak naturally (2s silence auto-stops)'
                 : conversationStatus === 'processing'
                 ? '⏳ Processing...'
                 : isProcessing
