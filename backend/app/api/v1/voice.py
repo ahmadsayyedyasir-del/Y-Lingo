@@ -1,8 +1,6 @@
 # app/api/v1/voice.py
 """Voice API endpoints — STT (Groq Whisper) and TTS (ElevenLabs)."""
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 from uuid import UUID
