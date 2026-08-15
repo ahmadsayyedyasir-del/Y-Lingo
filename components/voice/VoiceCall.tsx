@@ -162,7 +162,6 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
     utterance.volume = 1.0;
 
     const _speak = () => {
-      // Reload voices list — must be done after speechSynthesis is ready
       const voices = window.speechSynthesis.getVoices();
       const preferred =
         voices.find(v => /en[-_]US/i.test(v.lang) && v.localService) ||
@@ -184,15 +183,12 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
     if (voices.length > 0) {
       _speak();
     } else {
-      // Wait for voiceschanged event
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.onvoiceschanged = null;
         _speak();
       };
-      // Safety timeout: speak anyway after 500ms even if event never fires
-      setTimeout(() => {
-        if (!isSpeaking) _speak();
-      }, 500);
+      // Safety: speak after 500ms even if event never fires
+      setTimeout(_speak, 500);
     }
   };
 
@@ -226,18 +222,17 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
         audio.onerror = () => {
           URL.revokeObjectURL(url);
           audioRef.current = null;
-          // Fall back to browser TTS
           speakWithBrowserFallback(text);
         };
 
         await audio.play();
-        return; // ElevenLabs success — done
+        return;
       } catch (err: unknown) {
-        // 503 = ElevenLabs not configured, 401 = bad key
         const axiosErr = err as { response?: { status?: number } };
         const status = axiosErr?.response?.status;
-        if (status === 503 || status === 401) {
-          ttsAvailable.current = false; // stop trying ElevenLabs
+        // 402 = paid plan required, 503 = not configured, 401 = bad key
+        if (status === 402 || status === 503 || status === 401) {
+          ttsAvailable.current = false;
         }
         // Fall through to browser TTS
       }
