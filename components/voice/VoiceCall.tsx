@@ -67,6 +67,9 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
   const [nativeLanguage, setNativeLanguage] = useState('ur');
   const [xpEvent, setXpEvent] = useState<XPEvent | null>(null);
 
+  // Refs to avoid stale closures in callbacks
+  const isCallActiveRef = useRef(true);
+  const isProcessingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const conversationManagerRef = useRef<ConversationManagerRef>(null);
   // Audio element for ElevenLabs TTS playback
@@ -220,7 +223,8 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
 
   const _afterSpeaking = () => {
     setIsSpeaking(false);
-    if (isCallActive && !isProcessing) {
+    // Use refs to avoid stale closure — check latest isCallActive/isProcessing
+    if (isCallActiveRef.current && !isProcessingRef.current) {
       setTimeout(() => {
         conversationManagerRef.current?.startListening();
         setConversationStatus('listening');
@@ -231,7 +235,7 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
   const stopSpeaking = () => {
     stopAudio();
     setIsSpeaking(false);
-    if (isCallActive && !isProcessing) {
+    if (isCallActiveRef.current && !isProcessingRef.current) {
       setTimeout(() => {
         conversationManagerRef.current?.startListening();
         setConversationStatus('listening');
@@ -252,6 +256,7 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
       { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() },
     ]);
     setIsProcessing(true);
+    isProcessingRef.current = true;
     setConversationStatus('processing');
     setError(null);
 
@@ -292,6 +297,7 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
       }, 1000);
     } finally {
       setIsProcessing(false);
+      isProcessingRef.current = false;
     }
   };
 
@@ -308,6 +314,7 @@ export default function VoiceCall({ scenario, level }: VoiceCallProps) {
     stopAudio();
     conversationManagerRef.current?.cancel();
     setIsCallActive(false);
+    isCallActiveRef.current = false;
 
     if (sessionId) {
       try {

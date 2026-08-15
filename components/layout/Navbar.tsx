@@ -7,15 +7,16 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
 const NAV_LINKS = [
-  { href: '/dashboard',    label: 'Dashboard',  emoji: '🏠' },
-  { href: '/learn',        label: 'Learn',       emoji: '📚' },
-  { href: '/ielts',        label: 'IELTS',       emoji: '🎓' },
-  { href: '/conversation', label: 'Chat',        emoji: '🤖' },
-  { href: '/voice',        label: 'Voice',       emoji: '🎤' },
-  { href: '/history',      label: 'History',     emoji: '📜' },
-  { href: '/progress',     label: 'Progress',    emoji: '📊' },
-  { href: '/rag',          label: 'Documents',   emoji: '📄' },
-  { href: '/profile',      label: 'Profile',     emoji: '👤' },
+  { href: '/dashboard',    label: 'Dashboard',   emoji: '🏠' },
+  { href: '/learn',        label: 'Learn',        emoji: '📚' },
+  { href: '/ielts',        label: 'IELTS',        emoji: '🎓' },
+  { href: '/conversation', label: 'Chat',         emoji: '🤖' },
+  { href: '/voice',        label: 'Voice',        emoji: '🎤' },
+  { href: '/history',      label: 'History',      emoji: '📜' },
+  { href: '/progress',     label: 'Progress',     emoji: '📊' },
+  { href: '/leaderboard',  label: 'Leaderboard',  emoji: '🏆' },
+  { href: '/rag',          label: 'Documents',    emoji: '📄' },
+  { href: '/profile',      label: 'Profile',      emoji: '👤' },
 ];
 
 export default function Navbar() {

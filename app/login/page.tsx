@@ -3,10 +3,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,15 +18,19 @@ export default function LoginPage() {
     setError('');
 
     try {
-      console.log('🟢 Login button clicked!');
       await login(email, password);
-      console.log('✅ Login successful!');
-      
-      // ✅ Force redirect using window.location
-      window.location.href = '/dashboard';
-    } catch (err) {
-      console.error('❌ Login error:', err);
-      setError('Login failed. Please try again.');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { detail?: string; code?: string } } };
+      const code = axiosErr?.response?.data?.code;
+      const detail = axiosErr?.response?.data?.detail;
+
+      // Email not verified — redirect to verification page
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
+
+      setError(typeof detail === 'string' ? detail : 'Login failed. Please check your credentials.');
     }
   };
 
@@ -84,12 +90,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-gray-400 mt-6 text-sm">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-blue-400 hover:text-blue-300">
-              Sign up
+          <div className="flex justify-between mt-4 text-sm">
+            <Link href="/verify-email" className="text-gray-500 hover:text-gray-300">
+              Verify email
             </Link>
-          </p>
+            <p className="text-gray-400">
+              No account?{' '}
+              <Link href="/signup" className="text-blue-400 hover:text-blue-300">Sign up</Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

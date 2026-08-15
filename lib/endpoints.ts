@@ -179,6 +179,9 @@ export const gamificationEndpoints = {
 
   getAchievements: () =>
     apiClient.get<AchievementCatalogResponse>('/gamification/achievements'),
+
+  getLeaderboard: (type: 'xp' | 'streak' = 'xp', limit = 20) =>
+    apiClient.get(`/gamification/leaderboard?type=${type}&limit=${limit}`),
 };
 
 // ============================================================
